@@ -1,0 +1,39 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Variables globales */
+:root {
+	--primary-color: #0070f3;
+	--secondary-color: #0070f3;
+	--background-color: #ffffff;
+	--text-color: #333333;
+}
+
+/* Styles personnalisés */
+@layer components {
+	.auth-card {
+		@apply shadow-lg hover:shadow-xl transition-shadow duration-300;
+	}
+
+	.gradient-bg {
+		@apply bg-gradient-to-r from-blue-600 to-indigo-700;
+	}
+
+	.custom-input {
+		@apply border-gray-300 focus:ring-2;
+	}
+}
+
+/* Animations */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.fade-in {
+	animation: fadeIn 0.5s ease-in-out;
+}
