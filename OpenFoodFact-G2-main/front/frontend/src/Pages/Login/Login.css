@@ -1,0 +1,24 @@
+html, body{
+   height: 100%;
+   width: 100%;
+   background-color: rgba(229, 242, 244, 1);
+}
+
+#form-left{
+   width: 400px;
+   height: 500px;
+   background-color: white;
+   border-top-left-radius: 20px;
+   border-bottom-left-radius: 20px;
+}
+#form-right{
+   width: 400px;
+   height: 500px;
+   background-color: rgba(23, 162, 184, 1);
+   border-top-right-radius: 20px;
+   border-bottom-right-radius: 20px;
+}
+#form-left input{
+   width: 325px;
+   height: 35px;
+}

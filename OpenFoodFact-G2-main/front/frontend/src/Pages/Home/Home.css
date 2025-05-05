@@ -1,0 +1,41 @@
+.container {
+    width: 70%;
+    margin: 5% auto; /* Centrage vertical ajusté */
+    padding: 20px;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    background-color: #f9f9f9; /* Couleur de fond légèrement grisée */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Légère ombre pour effet de profondeur */
+  }
+  
+  .content {
+    text-align: justify; /* Justifie le texte dans le contenu */
+    color: #333; /* Couleur du texte principale */
+  }
+  
+  .description {
+    margin-bottom: 20px; /* Espacement en bas pour séparer des boutons */
+  }
+  
+  .button-group {
+    display: flex;
+    justify-content: center; /* Centre les boutons horizontalement */
+  }
+  
+  .button-group button {
+    margin: 0 10px; /* Espacement horizontal entre les boutons */
+    background-color: #fff; /* Fond blanc pour les boutons */
+    color: #000; /* Texte noir */
+    border: 1px solid #ccc; /* Bordure fine gris clair */
+    padding: 10px 20px; /* Padding interne des boutons */
+    border-radius: 5px; /* Coins arrondis */
+    cursor: pointer; /* Curseur pointeur au survol */
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s; /* Transition douce */
+  }
+  
+  .button-group button:hover {
+    background-color: #007bff; /* Fond bleu au survol */
+    color: #fff; /* Texte blanc au survol */
+    border-color: #007bff; /* Bordure bleue au survol */
+  }
+  

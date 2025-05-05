@@ -75,7 +75,7 @@ class ProductDetailView(APIView):
 
         if created:
             # Fetch from OpenFoodFacts API if not already in the database
-            url = f"https://fr.openfoodfacts.org/api/v2/product/{code}&fields=code,nutrition_grades,product_name,image_front_url,allergens_tags_fr,categories_tags_fr,nutriments"
+            url = f"https://fr.openfoodfacts.org/api/v3/product/{code}&fields=code,nutrition_grades,product_name,image_front_url,allergens_tags_fr,categories_tags_fr,nutriments"
             response = requests.get(url)
             if response.status_code != 200:
                 return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
