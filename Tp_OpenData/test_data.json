@@ -1,0 +1,74 @@
+[
+    {
+        "transaction_id": "T0055",
+        "date": "2025-05-29",
+        "client": {
+            "id": "C3742",
+            "name": "Transports Martin",
+            "segment": "ETI",
+            "sector": "Logistique",
+            "country": "France",
+            "region": "Hauts-de-France"
+        },
+        "product": {
+            "id": "P4528",
+            "name": "Logiciel de gestion de flotte",
+            "category": "Produits",
+            "subcategory": "Logiciels"
+        },
+        "transaction": {
+            "amount": 16850.00,
+            "currency": "EUR",
+            "payment_method": "Virement bancaire",
+            "status": "Complété"
+        },
+        "financial_metrics": {
+            "revenue": 16850.00,
+            "cost": 9267.50,
+            "profit": 7582.50,
+            "profit_margin": 0.45,
+            "tax": 3370.00
+        },
+        "performance": {
+            "delivery_days": 7,
+            "customer_satisfaction": 4.6,
+            "renewal_probability": 0.92
+        }
+    },
+    {
+        "transaction_id": "T0056",
+        "date": "2025-05-30",
+        "client": {
+            "id": "C4237",
+            "name": "Laboratoires Scientek",
+            "segment": "Grande entreprise",
+            "sector": "Pharmaceutique",
+            "country": "France",
+            "region": "Auvergne-Rhône-Alpes"
+        },
+        "product": {
+            "id": "P3975",
+            "name": "Équipement d'analyse avancé",
+            "category": "Produits",
+            "subcategory": "Matériel scientifique"
+        },
+        "transaction": {
+            "amount": 42300.00,
+            "currency": "EUR",
+            "payment_method": "Virement bancaire",
+            "status": "Complété"
+        },
+        "financial_metrics": {
+            "revenue": 42300.00,
+            "cost": 25380.00,
+            "profit": 16920.00,
+            "profit_margin": 0.40,
+            "tax": 8460.00
+        },
+        "performance": {
+            "delivery_days": 21,
+            "customer_satisfaction": 4.3,
+            "renewal_probability": 0.85
+        }
+    }
+]
