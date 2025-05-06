@@ -8,22 +8,21 @@ export interface Product {
 }
 
 export interface UserData {
-	email: string;
-	nom: string;
-	prenom: string;
+	username: string;
 	password: string;
 }
 
 export interface LoginResponse {
 	success: boolean;
 	user?: {
-		email: string;
-		name: string;
+		username: string;
+		token: string;
 	};
 	error?: string;
 }
 
 export interface RegisterResponse {
 	success: boolean;
+	message?: string;
 	error?: string;
 }

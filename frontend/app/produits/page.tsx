@@ -6,6 +6,7 @@ import SearchBar from "@/app/components/SearchBar";
 import ProductCard from "@/app/components/ProductCard";
 import { getProducts } from "@/app/lib/data";
 import { Product } from "@/app//types";
+import { logout } from "../lib/auth";
 
 export default function Produits() {
 	const router = useRouter();
@@ -59,7 +60,7 @@ export default function Produits() {
 	};
 
 	const handleLogout = () => {
-		localStorage.removeItem("isLoggedIn");
+		logout();
 		router.push("/");
 	};
 

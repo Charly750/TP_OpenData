@@ -4,31 +4,67 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { UserData } from "../types";
+import { register } from "@/app/lib/auth"; // Ajustez le chemin selon votre structure
 
 export default function Inscription() {
 	const router = useRouter();
-	const [email, setEmail] = useState<string>("");
+	const [username, setUsername] = useState<string>("");
 	const [password, setPassword] = useState<string>("");
 	const [confirmPassword, setConfirmPassword] = useState<string>("");
-	const [nom, setNom] = useState<string>("");
-	const [prenom, setPrenom] = useState<string>("");
-	const [error, setError] = useState<string>("");
+	const [error, setError] = useState<string | null>(null);
+	const [loading, setLoading] = useState(false);
 
-	const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 
+		// Réinitialisation de l'erreur
+		setError(null);
+
+		// Validation basique des champs
+		if (!username || !password) {
+			setError("Tous les champs sont requis");
+			return;
+		}
+
+		// Vérification que les mots de passe correspondent
 		if (password !== confirmPassword) {
 			setError("Les mots de passe ne correspondent pas");
 			return;
 		}
 
-		// Simulation d'inscription
-		// Dans une application réelle, envoyez ces données à votre API
-		const userData: UserData = { email, nom, prenom, password };
-		console.log("Inscription:", userData);
+		try {
+			setLoading(true);
 
-		// Redirection vers la page de connexion
-		router.push("/");
+			// Préparation des données utilisateur
+			const userData: UserData = {
+				username,
+				password,
+			};
+
+			// Appel de la fonction register
+			const response = await register(userData);
+
+			// Traitement de la réponse
+			if (response.success) {
+				// Redirection vers la page de connexion en cas de succès
+				// Vous pouvez aussi utiliser une notification toast ici
+				alert(
+					"Inscription réussie! Vous pouvez maintenant vous connecter."
+				);
+				router.push("/");
+			} else {
+				// Affichage de l'erreur retournée par l'API
+				setError(
+					response.error ||
+						"Une erreur est survenue lors de l'inscription"
+				);
+			}
+		} catch (err) {
+			setError("Erreur de connexion au serveur");
+			console.error("Erreur lors de l'inscription:", err);
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	return (
@@ -48,53 +84,17 @@ export default function Inscription() {
 					<div className="mb-4">
 						<label
 							className="block text-gray-700 text-sm font-bold mb-2"
-							htmlFor="nom"
+							htmlFor="text"
 						>
-							Nom
+							Username
 						</label>
 						<input
 							className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-							id="nom"
+							id="text"
 							type="text"
-							placeholder="Nom"
-							value={nom}
-							onChange={(e) => setNom(e.target.value)}
-							required
-						/>
-					</div>
-
-					<div className="mb-4">
-						<label
-							className="block text-gray-700 text-sm font-bold mb-2"
-							htmlFor="prenom"
-						>
-							Prénom
-						</label>
-						<input
-							className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-							id="prenom"
-							type="text"
-							placeholder="Prénom"
-							value={prenom}
-							onChange={(e) => setPrenom(e.target.value)}
-							required
-						/>
-					</div>
-
-					<div className="mb-4">
-						<label
-							className="block text-gray-700 text-sm font-bold mb-2"
-							htmlFor="email"
-						>
-							Email
-						</label>
-						<input
-							className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-							id="email"
-							type="email"
-							placeholder="Email"
-							value={email}
-							onChange={(e) => setEmail(e.target.value)}
+							placeholder="Username"
+							value={username}
+							onChange={(e) => setUsername(e.target.value)}
 							required
 						/>
 					</div>
