@@ -1,104 +1,174 @@
-# backend_test.py
 from flask import Flask, request, jsonify
-from kafka import KafkaProducer
-import json
-import random
-import time
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+import jwt
+import datetime
+from functools import wraps
+import requests
+
+# Initialisation de l'application Flask
 app = Flask(__name__)
 CORS(app)
-producer = KafkaProducer(
-    bootstrap_servers='kafka:9092',
-    value_serializer=lambda v: json.dumps(v).encode('utf-8')
-)
 
-# @app.route('/data', methods=['GET'])
-# def get_products():
-#     products = [
-#         {"id": "1", "name": "Laptop", "price": 999.99},
-#         {"id": "2", "name": "Smartphone", "price": 499.49},
-#         {"id": "3", "name": "Tablet", "price": 299.99}
-#     ]
+# Configuration
+app.config['SECRET_KEY'] = 'cle_secrete_dev_123456789_flask_demo'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 
-#     # Envoie les produits dans Kafka
-#     for product in products:
-#         producer.send("topic1", product)
+db = SQLAlchemy(app)
 
-#     return jsonify({"message": "Produits envoyés à Kafka (topic1).", "data": products})
+# Modèle Utilisateur
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(150), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    history = db.relationship('SearchHistory', backref='user', lazy=True)
 
-@app.route('/data', methods=['POST'])
-def get_data():
-    datas = request.get_json()  # récupère les données JSON envoyées
-    # Envoie les produits dans Kafka
-    try :
-        for data in datas:
-            
-            # return jsonify({"message": "Data envoyés à Kafka (topic1).", "data": data["transaction_id"]})
-            data['client']["transaction_id"] = data["transaction_id"]
-            data['product']["transaction_id"] = data["transaction_id"]
-            data['transaction']["transaction_id"] = data["transaction_id"]
-            data['financial_metrics']["transaction_id"] = data["transaction_id"]
-            data['performance']["transaction_id"] = data["transaction_id"]
+# Modèle Historique
+class SearchHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    search_term = db.Column(db.String(150), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-            producer.send("topic1", data)
-            producer.send("topic2", data['client'])
-            producer.send("topic3", data['product'])
-            producer.send("topic4", data['transaction'])
-            producer.send("topic5", data['financial_metrics'])
-            producer.send("topic6", data['performance'])
-        return jsonify({"message": "Votre fichier a été envoyé avec succès!", "data": datas})
-    except Exception as e:
-        return jsonify({"message": "Erreur lors de l'envoi des données!", "error": str(e)}), 500
+# Création des tables
+with app.app_context():
+    db.create_all()
 
+# Middleware d’authentification via JWT
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if token is None:
+            return jsonify({'error': 'Token manquant'}), 401
+        try:
+            token = token.replace("Bearer ", "")
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            current_user = User.query.filter_by(username=data['username']).first()
+        except jwt.ExpiredSignatureError:
+            return jsonify({'error': 'Token expiré'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'error': 'Token invalide'}), 401
+        return f(current_user, *args, **kwargs)
+    return decorated
 
-@app.route('/auth', methods=['POST'])
-def auth():
-    data = request.get_json()  # récupère les données JSON envoyées
+# Route d’enregistrement utilisateur
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
     username = data.get('username')
     password = data.get('password')
-    if username == 'admin' and password == 'admin':
-        return jsonify({"message": "Authentification réussie"}), 200
-    else:
-        return jsonify({"message": "Authentification échouée"}), 401
-# @app.route('/purchase', methods=['POST'])
-# def post_purchase():
-#     # Données d'achat générées aléatoirement
-#     user_id = str(random.randint(1, 100))
-#     product_id = random.choice(["1", "2", "3"])
-#     quantity = random.randint(1, 5)
-#     prices = {"1": 999.99, "2": 499.49, "3": 299.99}
-#     total = round(prices[product_id] * quantity, 2)
 
-#     data = {
-#         "user_id": user_id,
-#         "product_id": product_id,
-#         "quantity": quantity,
-#         "total": total
-#     }
+    if not username or not password:
+        return jsonify({'error': 'Champs requis manquants'}), 400
 
-#     producer.send("topic2", data)
-#     return jsonify({"message": "Achat aléatoire publié dans Kafka (topic2).", "data": data})
+    if User.query.filter_by(username=username).first():
+        return jsonify({'error': 'Utilisateur déjà existant'}), 409
 
-# @app.route('/random-batch', methods=['POST'])
-# def random_batch():
-#     batch = []
-#     for _ in range(10):
-#         user_id = str(random.randint(1, 100))
-#         product_id = random.choice(["1", "2", "3"])
-#         quantity = random.randint(1, 5)
-#         prices = {"1": 999.99, "2": 499.49, "3": 299.99}
-#         total = round(prices[product_id] * quantity, 2)
-#         data = {
-#             "user_id": user_id,
-#             "product_id": product_id,
-#             "quantity": quantity,
-#             "total": total
-#         }
-#         producer.send("topic2", data)
-#         batch.append(data)
-#         time.sleep(0.2)  # petite pause pour simuler un flux
+    hashed_password = generate_password_hash(password)
+    new_user = User(username=username, password=hashed_password)
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({'message': 'Utilisateur enregistré avec succès'}), 201
 
-#     return jsonify({"message": "Batch d'achats aléatoires envoyé dans Kafka.", "data": batch})
+# Route d’authentification utilisateur
+@app.route('/auth', methods=['POST'])
+def auth():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
 
+    user = User.query.filter_by(username=username).first()
+    if user and check_password_hash(user.password, password):
+        token = jwt.encode({
+            'username': user.username,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+        }, app.config['SECRET_KEY'], algorithm='HS256')
+        return jsonify({'message': 'Authentification réussie', 'token': token}), 200
+
+    return jsonify({'error': 'Nom d’utilisateur ou mot de passe invalide'}), 401
+
+# Recherche de produit par code-barres avec historique
+@app.route('/product/<string:product_code>', methods=['GET'])
+@token_required
+def get_product_suggestions(current_user, product_code):
+    try:
+        # Enregistrement dans l’historique
+        history_entry = SearchHistory(search_term=product_code, user_id=current_user.id)
+        db.session.add(history_entry)
+        db.session.commit()
+
+        url = f'https://world.openfoodfacts.org/api/v2/product/{product_code}'
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+
+        if data:
+            return jsonify(data), 200
+        else:
+            return jsonify({'error': 'Produit non trouvé'}), 404
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 400
+
+# Recherche par mot-clé avec historique
+@app.route('/search/<string:search>', methods=['GET'])
+@token_required
+def search_product(current_user, search):
+    try:
+        # Enregistrement dans l’historique
+        history_entry = SearchHistory(search_term=search, user_id=current_user.id)
+        db.session.add(history_entry)
+        db.session.commit()
+
+        url = f'https://world.openfoodfacts.org/api/v2/search?categories_tags_fr={search}&countries_tags=en:france|fr:france&sort_by=nutriscore_score&page=1&page_size=5'
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+
+        if len(data.get('products', [])) < 5:
+            url = f'https://world.openfoodfacts.org/api/v2/search?brands_tags_fr={search}&countries_tags=en:france|fr:france&sort_by=nutriscore_score&page=1&page_size=5'
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+
+        return jsonify(data), 200
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 400
+
+# Affichage de l’historique utilisateur
+@app.route('/history', methods=['GET'])
+@token_required
+def get_history(current_user):
+    history = SearchHistory.query.filter_by(user_id=current_user.id).order_by(SearchHistory.timestamp.desc()).all()
+    result = [
+        {
+            'search_term': h.search_term,
+            'timestamp': h.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        for h in history
+    ]
+    return jsonify(result), 200
+
+# Lancement de l’application Flask
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
+
+ # product = data.get('product', {})
+        # categories = product.get('categories_tags', [])
+
+        # search_category = next((cat for cat in categories if cat.startswith('fr:')), None)
+        # if not search_category and categories:
+        #     search_category = categories[-1]
+
+        # if search_category:
+        #     url2 = f'https://world.openfoodfacts.org/api/v2/search?categories_tags_fr={search_category}&countries_tags=en:france|fr:france&sort_by=nutriscore_score&page=1&page_size=5'
+        #     response2 = requests.get(url2)
+        #     response2.raise_for_status()
+        #     data2 = response2.json()
+        #     return jsonify(data2), 200
+        # else:
+        #     return jsonify({'error': 'No valid category found'}), 404

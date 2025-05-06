@@ -114,17 +114,17 @@ CSRF_TRUSTED_ORIGINS = [
 #         'PORT': '',
 #     }
 # }
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'OPTIONS' : { "init_command": "SET foreign_key_checks = 0;" },
-        'NAME': 'guigui_django',
-        'USER': 'guigui_charly',
-        'PASSWORD': 'Charly01!',
-        'HOST': 'mysql-guigui.alwaysdata.net',
-        'PORT': '',
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'OPTIONS' : { "init_command": "SET foreign_key_checks = 0;" },
+#         'NAME': 'guigui_django',
+#         'USER': 'guigui_charly',
+#         'PASSWORD': 'Charly01!',
+#         'HOST': 'mysql-guigui.alwaysdata.net',
+#         'PORT': '',
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
