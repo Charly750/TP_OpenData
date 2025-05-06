@@ -90,6 +90,32 @@ def auth():
     return jsonify({'error': 'Nom d’utilisateur ou mot de passe invalide'}), 401
 
 # Recherche de produit par code-barres avec historique
+@app.route('/product', methods=['POST'])
+@token_required
+def get_product():
+    data = request.get_json()
+    sort = data.get('sort')
+    page = data.get('page')
+    if sort is None:
+        sort = "nutriscore_score"
+    if page is None:
+        page = 1
+    try:
+      
+        url = f'https://world.openfoodfacts.org/api/v2/search?sort_by={sort}&page={page}&page_size=50'
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+
+        if data:
+            return jsonify(data), 200
+        else:
+            return jsonify({'error': 'Produit non trouvé'}), 404
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 400
+
+# Recherche de produit par code-barres avec historique
 @app.route('/product/<string:product_code>', methods=['GET'])
 @token_required
 def get_product_suggestions(current_user, product_code):
