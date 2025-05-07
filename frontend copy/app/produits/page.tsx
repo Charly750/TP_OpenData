@@ -22,11 +22,8 @@ export default function Produits() {
 	const [isScannerOpen, setScannerOpen] = useState(false);
 	const [scannedCode, setScannedCode] = useState<string | null>(null);
 	useEffect(() => {
-		async function loadSDK() {
-			await ScanbotSDKService.instance.initialize();
-			
-		}
-		loadSDK();
+		
+
 		const checkAuth = () => {
 			const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
 			if (!isLoggedIn) {
@@ -181,7 +178,9 @@ export default function Produits() {
         isOpen={isScannerOpen}
         onClose={() => setScannerOpen(false)}
         onScan={(result) => {
+			console.log("je suis ici")
           setScannedCode(result);
+		  console.log("Scanned code: ", result);
           // Autre logique métier ici
         }}
       />

@@ -28,15 +28,25 @@ export default class ScanbotSDKService {
             return;
         }
 
-        // Use dynamic inline imports to load the SDK, else Next will load it into the server bundle
-        // and attempt to load it before the 'window' object becomes available.
-        // https://nextjs.org/docs/pages/building-your-application/optimizing/lazy-loading
-        const sdk = (await import('scanbot-web-sdk')).default;
+        try {
+            // Use dynamic inline imports to load the SDK, else Next will load it into the server bundle
+            // and attempt to load it before the 'window' object becomes available.
+            // https://nextjs.org/docs/pages/building-your-application/optimizing/lazy-loading
+            const sdk = (await import('scanbot-web-sdk')).default;
 
-        this.sdk = await sdk.initialize({
-            licenseKey: this.LICENSE_KEY,
-            enginePath: "/wasm",
-        });
+            // Make sure the enginePath is absolute and points to where your WASM files are located
+            // The path should be where you've placed the Scanbot engine files in your public directory
+            this.sdk = await sdk.initialize({
+                licenseKey: this.LICENSE_KEY,
+                // Make sure this path is correct - it should be the absolute path to the WASM files
+                enginePath: window.location.origin + "/wasm/",  // Note the trailing slash and absolute URL
+            });
+            
+            console.log("Scanbot SDK initialized successfully");
+        } catch (error) {
+            console.error("Failed to initialize Scanbot SDK:", error);
+            throw error; // Rethrow to allow proper error handling upstream
+        }
     }
 
     private documentScanner?: IDocumentScannerHandle;

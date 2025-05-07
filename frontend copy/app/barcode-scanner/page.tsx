@@ -18,11 +18,13 @@ export default function BarcodeScannerModal({
     if (!isOpen) return;
 
     ScanbotSDKService.instance.createBarcodeScanner("barcode-scanner", async (barcode) => {
+      console.log("je suis la")
       if (barcode.sourceImage) {
         const base64Image = await ScanbotSDKService.instance.sdk?.toDataUrl(
           await ScanbotSDKService.instance.sdk?.imageToJpeg(barcode.sourceImage)
         );
         const result = `${barcode.text} (${barcode.format})`;
+        console.log("je suis la 2")
         onScan(result);
 
         // Optionnel : fermeture auto après scan
