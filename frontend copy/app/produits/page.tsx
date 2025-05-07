@@ -6,6 +6,8 @@ import SearchBar from "@/app/components/SearchBar";
 import { getProduct } from "@/app/lib/data";
 import { Product } from "@/app/types";
 import { logout } from "../lib/auth";
+import BarcodeScannerModal from "../barcode-scanner/page";
+import ScanbotSDKService from "./../services/scanbot-sdk-service";
 
 export default function Produits() {
 	const router = useRouter();
@@ -17,8 +19,14 @@ export default function Produits() {
 	const [loading, setLoading] = useState<boolean>(true);
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [totalPages, setTotalPages] = useState<number>(1);
-
+	const [isScannerOpen, setScannerOpen] = useState(false);
+	const [scannedCode, setScannedCode] = useState<string | null>(null);
 	useEffect(() => {
+		async function loadSDK() {
+			await ScanbotSDKService.instance.initialize();
+			
+		}
+		loadSDK();
 		const checkAuth = () => {
 			const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
 			if (!isLoggedIn) {
@@ -164,7 +172,20 @@ export default function Produits() {
 						Déconnexion
 					</button>
 				</div>
+				<div>
+      <button onClick={() => setScannerOpen(true)}>Ouvrir le scanner</button>
 
+      {scannedCode && <p>Résultat : {scannedCode}</p>}
+
+      <BarcodeScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={(result) => {
+          setScannedCode(result);
+          // Autre logique métier ici
+        }}
+      />
+    </div>
 				{/* Recherche et filtre */}
 				<div className="flex flex-col md:flex-row md:items-center md:space-x-4 mb-6">
 					<div className="w-full md:w-1/3 mb-4 md:mb-0">
