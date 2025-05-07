@@ -167,32 +167,43 @@ def get_product_suggestions(current_user, product_code):
 # Recherche par mot-clé avec historique
 
 
-@app.route('/search/<string:search>', methods=['GET'])
+@app.route('/search/category/<string:search>', methods=['GET'])
 @token_required
-def search_product(current_user, search):
+def search_productbycategory(current_user, search):
     try:
         # Enregistrement dans l’historique
-        history_entry = SearchHistory(
-            search_term=search, user_id=current_user.id)
+        history_entry = SearchHistory(search_term=search, user_id=current_user.id)
         db.session.add(history_entry)
         db.session.commit()
 
-        url = f'https://world.openfoodfacts.org/api/v2/search?categories_tags_fr={search}&countries_tags=en:france|fr:france&sort_by=nutriscore_score&page=1&page_size=5'
+        url = f'https://world.openfoodfacts.org/api/v2/search?categories_tags_fr={search}&countries_tags=en:france|fr:france&page=1&page_size=5'
         response = requests.get(url)
         response.raise_for_status()
         data = response.json()
 
-        if len(data.get('products', [])) < 5:
-            url = f'https://world.openfoodfacts.org/api/v2/search?brands_tags_fr={search}&countries_tags=en:france|fr:france&sort_by=nutriscore_score&page=1&page_size=5'
-            response = requests.get(url)
-            response.raise_for_status()
-            data = response.json()
-
+       
         return jsonify(data), 200
-
     except requests.exceptions.RequestException as e:
         return jsonify({'error': str(e)}), 400
+    
 
+@app.route('/search/brand/<string:search>', methods=['GET'])
+@token_required
+def search_productbybrand(current_user, search):
+    try:
+        # Enregistrement dans l’historique
+        history_entry = SearchHistory(search_term=search, user_id=current_user.id)
+        db.session.add(history_entry)
+        db.session.commit()
+        url = f'https://world.openfoodfacts.org/api/v2/search?brands_tags_fr={search}&countries_tags=en:france|fr:france&page=1&page_size=5'
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+
+        return jsonify(data), 200
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 400
+    
 # Affichage de l’historique utilisateur
 
 
