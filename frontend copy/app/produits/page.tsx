@@ -7,23 +7,21 @@ import { getProduct } from "@/app/lib/data";
 import { Product } from "@/app/types";
 import { logout } from "../lib/auth";
 import BarcodeScannerModal from "../barcode-scanner/page";
-import ScanbotSDKService from "./../services/scanbot-sdk-service";
 
 export default function Produits() {
 	const router = useRouter();
 	const [products, setProducts] = useState<Product[]>([]);
 	const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 	const [searchTerm, setSearchTerm] = useState<string>("");
-	const [searchType, setSearchType] = useState<string>("category"); // Nouveau : type de recherche
+	const [searchType, setSearchType] = useState<string>("category");
 	const [filterNutriscore, setFilterNutriscore] = useState<string>("all");
 	const [loading, setLoading] = useState<boolean>(true);
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [totalPages, setTotalPages] = useState<number>(1);
 	const [isScannerOpen, setScannerOpen] = useState(false);
 	const [scannedCode, setScannedCode] = useState<string | null>(null);
-	useEffect(() => {
-		
 
+	useEffect(() => {
 		const checkAuth = () => {
 			const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
 			if (!isLoggedIn) {
@@ -119,7 +117,7 @@ export default function Produits() {
 
 	const handleSearchTypeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
 		setSearchType(event.target.value);
-		setSearchTerm(""); // réinitialise la recherche courante
+		setSearchTerm("");
 	};
 
 	const handleLogout = () => {
@@ -157,6 +155,43 @@ export default function Produits() {
 		return pages;
 	};
 
+	// 🔄 Récupérer un produit par code-barres
+	const fetchProductByBarcode = async (code: string) => {
+		try {
+			setLoading(true);
+			const token = localStorage.getItem("authToken");
+
+			const response = await fetch(`http://localhost:5000/product/${code}`, {
+				headers: {
+					Authorization: `Bearer ${token}`,
+				},
+			});
+
+			if (!response.ok) {
+				alert("Produit non trouvé");
+				throw new Error("Produit non trouvé");
+			}
+
+			const data = await response.json();
+
+			if (data && data.product) {
+				setProducts([data.product]);
+				setFilteredProducts([data.product]);
+				setTotalPages(1);
+				setSearchTerm("");
+			} else {
+				setProducts([]);
+				setFilteredProducts([]);
+			}
+		} catch (error) {
+			console.error("Erreur lors de la récupération du produit :", error);
+			setProducts([]);
+			setFilteredProducts([]);
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	return (
 		<div className="min-h-screen bg-gray-100">
 			<div className="container mx-auto px-4 py-8">
@@ -169,31 +204,38 @@ export default function Produits() {
 						Déconnexion
 					</button>
 				</div>
-				<div>
-      <button onClick={() => setScannerOpen(true)}>Ouvrir le scanner</button>
 
-      {scannedCode && <p>Résultat : {scannedCode}</p>}
+				{/* Scanner */}
+				<div className="mb-6">
+					<button
+						onClick={() => setScannerOpen(true)}
+						className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded"
+					>
+						Ouvrir le scanner
+					</button>
+					{scannedCode && (
+						<p className="mt-2 text-gray-700">
+							Code scanné : <strong>{scannedCode}</strong>
+						</p>
+					)}
 
-      <BarcodeScannerModal
-        isOpen={isScannerOpen}
-        onClose={() => setScannerOpen(false)}
-        onScan={(result) => {
-			console.log("je suis ici")
-          setScannedCode(result);
-		  console.log("Scanned code: ", result);
-          // Autre logique métier ici
-        }}
-      />
-    </div>
-				{/* Recherche et filtre */}
+					<BarcodeScannerModal
+						isOpen={isScannerOpen}
+						onClose={() => setScannerOpen(false)}
+						onScan={(result) => {
+							console.log("Scanned code: ", result);
+							setScannedCode(result);
+							fetchProductByBarcode(result);
+						}}
+					/>
+				</div>
+
+				{/* Recherche et filtres */}
 				<div className="flex flex-col md:flex-row md:items-center md:space-x-4 mb-6">
 					<div className="w-full md:w-1/3 mb-4 md:mb-0">
 						<SearchBar onSearch={handleSearch} />
 					</div>
 
-
-
-					{/* Select : Recherche par */}
 					<div className="w-full md:w-1/4 mb-4 md:mb-0">
 						<label className="block mb-1 text-sm font-medium text-gray-700">
 							Recherche par
@@ -201,14 +243,13 @@ export default function Produits() {
 						<select
 							value={searchType}
 							onChange={handleSearchTypeChange}
-							className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+							className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900"
 						>
 							<option value="category">Par Catégorie</option>
 							<option value="brand">Par Marque</option>
 						</select>
 					</div>
 
-					{/* Select : Nutriscore */}
 					<div className="w-full md:w-1/4">
 						<label className="block mb-1 text-sm font-medium text-gray-700">
 							Nutriscore
@@ -216,7 +257,7 @@ export default function Produits() {
 						<select
 							value={filterNutriscore}
 							onChange={handleFilterChange}
-							className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+							className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900"
 						>
 							<option value="all">Tous les Nutriscores</option>
 							<option value="a">Nutriscore A</option>
@@ -226,10 +267,6 @@ export default function Produits() {
 							<option value="e">Nutriscore E</option>
 						</select>
 					</div>
-
-
-
-
 				</div>
 
 				{/* Grille produits */}
