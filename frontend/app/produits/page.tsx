@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import SearchBar from "@/app/components/SearchBar";
 import ProductCard from "@/app/components/ProductCard";
-import { getProducts } from "@/app/lib/data";
+import { getProduct } from "@/app/lib/data";
 import { Product } from "@/app//types";
 import { logout } from "../lib/auth";
 
@@ -26,13 +26,15 @@ export default function Produits() {
 			return true;
 		};
 
-		// Chargement des produits si authentifié
 		const loadProducts = async () => {
 			if (checkAuth()) {
 				try {
-					const data = await getProducts();
-					setProducts(data);
-					setFilteredProducts(data);
+					const data = await getProduct({
+						sort: "nutriscore_score",
+						page: 1,
+					});
+					setProducts(data.products || []); // pour éviter un crash si `products` est undefined
+					setFilteredProducts(data.products || []);
 				} catch (error) {
 					console.error(
 						"Erreur lors du chargement des produits",
@@ -41,6 +43,8 @@ export default function Produits() {
 				} finally {
 					setLoading(false);
 				}
+			} else {
+				setLoading(false);
 			}
 		};
 
@@ -63,6 +67,10 @@ export default function Produits() {
 		logout();
 		router.push("/");
 	};
+	console.log(
+		"Exemple de produit :",
+		JSON.stringify(filteredProducts[0], null, 2)
+	);
 
 	return (
 		<div className="min-h-screen bg-gray-100">
@@ -84,7 +92,43 @@ export default function Produits() {
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
 					{filteredProducts.length > 0 ? (
 						filteredProducts.map((product) => (
-							<ProductCard key={product.id} product={product} />
+							<div
+								key={product.id}
+								className="bg-white rounded-xl shadow-md overflow-hidden"
+							>
+								<img
+									src={product.image_thumb_url}
+									alt={product.product_name || "Produit"}
+									className="w-full h-48 object-cover"
+								/>
+								<div className="p-4">
+									<h3 className="text-lg font-semibold mb-1">
+										{product.product_name}
+									</h3>
+									<p className="text-sm text-gray-700">
+										Nutriscore : {product.nutrition_grades}
+									</p>
+									<p className="text-sm text-gray-700">
+										Nova : {product.nova_group}
+									</p>
+									<p className="text-sm text-gray-700">
+										Ecoscore : {product.ecoscore_grade}
+									</p>
+									<p className="text-sm text-gray-700">
+										Magasin : {product.stores}
+									</p>
+									<div className="flex justify-between items-center mt-4">
+										<a
+											href={product.url}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="text-blue-600 hover:underline text-sm"
+										>
+											Détails
+										</a>
+									</div>
+								</div>
+							</div>
 						))
 					) : (
 						<p className="text-gray-600 col-span-3 text-center py-8">
