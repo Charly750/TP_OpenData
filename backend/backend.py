@@ -105,7 +105,12 @@ def get_product(current_user):
         response = requests.get(url)
         response.raise_for_status()
         results = response.json()
-
+        print(results.get("count"))
+        pagination = results.get("count") / 50
+        if pagination != int(pagination):
+            pagination = int(pagination) + 1
+        print(pagination)
+        results['pagination'] = pagination
         if results.get('products'):
             return jsonify(results), 200
         else:
