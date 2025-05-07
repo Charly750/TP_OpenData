@@ -322,7 +322,7 @@ export default function Produits() {
                 >
                   <div className="relative h-56 overflow-hidden">
                     <img
-                      src={product.image_thumb_url || "/placeholder.svg"}
+                      src={product.image_url || "/placeholder.svg"}
                       alt={product.product_name || "Produit"}
                       className="w-full h-full object-cover transition-transform hover:scale-105"
                     />
