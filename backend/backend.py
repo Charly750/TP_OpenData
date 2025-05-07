@@ -123,12 +123,12 @@ def get_product(current_user):
         return jsonify(cached_data), 200
 
     try:
-        url = f'https://world.openfoodfacts.org/api/v2/search?sort_by={sort}&page={page}&page_size=50'
+        url = f'https://world.openfoodfacts.org/api/v2/search?sort_by={sort}&page={page}&page_size=51'
         response = requests.get(url)
         response.raise_for_status()
         results = response.json()
 
-        pagination = (results.get("count", 0) + 49) // 50
+        pagination = (results.get("count", 0) + 49) // 51
         results['pagination'] = pagination
 
         cache.set(cache_key, results)  # Stocke la réponse dans le cache
@@ -176,7 +176,7 @@ def search_productbycategory(current_user, search):
         db.session.add(history_entry)
         db.session.commit()
 
-        url = f'https://world.openfoodfacts.org/api/v2/search?categories_tags_fr={search}&countries_tags=en:france|fr:france&page=1&page_size=5'
+        url = f'https://world.openfoodfacts.org/api/v2/search?categories_tags_fr={search}&countries_tags=en:france|fr:france&page=1&page_size=51'
         response = requests.get(url)
         response.raise_for_status()
         data = response.json()
@@ -195,7 +195,7 @@ def search_productbybrand(current_user, search):
         history_entry = SearchHistory(search_term=search, user_id=current_user.id)
         db.session.add(history_entry)
         db.session.commit()
-        url = f'https://world.openfoodfacts.org/api/v2/search?brands_tags_fr={search}&countries_tags=en:france|fr:france&page=1&page_size=5'
+        url = f'https://world.openfoodfacts.org/api/v2/search?brands_tags_fr={search}&countries_tags=en:france|fr:france&page=1&page_size=51'
         response = requests.get(url)
         response.raise_for_status()
         data = response.json()
