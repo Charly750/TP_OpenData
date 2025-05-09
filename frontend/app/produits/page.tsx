@@ -40,7 +40,7 @@ export default function Produits() {
         try {
           setLoading(true)
           const data = await getProduct({
-            sort: "nutriscore_score",
+            sort: "popularity_key",
             page: currentPage,
           })
           setProducts(data.products || [])
@@ -141,11 +141,10 @@ export default function Produits() {
         <button
           key={i}
           onClick={() => setCurrentPage(i)}
-          className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
-            currentPage === i
+          className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${currentPage === i
               ? "bg-emerald-600 text-white font-semibold"
               : "bg-white text-emerald-600 border border-emerald-200 hover:bg-emerald-50"
-          }`}
+            }`}
         >
           {i}
         </button>,
@@ -261,7 +260,7 @@ export default function Produits() {
               <label className="block mb-2 text-sm font-medium text-gray-700">Rechercher un produit</label>
               <div className="relative">
                 <SearchBar onSearch={handleSearch} />
-                <Search className="absolute right-3 top-3 text-gray-400" size={20} />
+
               </div>
             </div>
 
@@ -322,7 +321,8 @@ export default function Produits() {
                 >
                   <div className="relative h-56 overflow-hidden">
                     <img
-                      src={product.image_url || "/placeholder.svg"}
+                      src={product.image_url || "/no_picture.png"}
+
                       alt={product.product_name || "Produit"}
                       className="w-full h-full object-cover transition-transform hover:scale-105"
                     />

@@ -4,7 +4,7 @@ interface ProductQuery {
 }
 
 export const getProduct = async ({
-	sort = "nutriscore_score",
+	sort = "popularity_key",
 	page = 1,
 }: ProductQuery) => {
 	try {
