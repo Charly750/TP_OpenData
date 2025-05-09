@@ -1,284 +1,413 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import SearchBar from "@/app/components/SearchBar";
-import ProductCard from "@/app/components/ProductCard";
-import { getProduct } from "@/app/lib/data";
-import { Product } from "@/app//types";
-import { logout } from "../lib/auth";
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import SearchBar from "@/app/components/SearchBar"
+import { getProduct } from "@/app/lib/data"
+import type { Product } from "@/app/types"
+import { logout } from "../lib/auth"
+import BarcodeScannerModal from "../barcode-scanner/page"
+import { Search, LogOut, Scan, Filter, ChevronLeft, ChevronRight, ExternalLink, Loader2 } from "lucide-react"
 
 export default function Produits() {
-	const router = useRouter();
-	const [products, setProducts] = useState<Product[]>([]);
-	const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-	const [searchTerm, setSearchTerm] = useState<string>("");
-	const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
-	const [loadingPage, setLoadingPage] = useState<boolean>(false);
-	const [currentPage, setCurrentPage] = useState<number>(1);
-	const [totalPages, setTotalPages] = useState<number>(1);
+  const router = useRouter()
+  const [products, setProducts] = useState<Product[]>([])
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
+  const [searchTerm, setSearchTerm] = useState<string>("")
+  const [searchType, setSearchType] = useState<string>("category")
+  const [filterNutriscore, setFilterNutriscore] = useState<string>("all")
+  const [loading, setLoading] = useState<boolean>(true)
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [totalPages, setTotalPages] = useState<number>(1)
+  const [isScannerOpen, setScannerOpen] = useState(false)
+  const [scannedCode, setScannedCode] = useState<string | null>(null)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
-	useEffect(() => {
-		// Vérification côté client uniquement
-		const checkAuth = () => {
-			const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-			if (!isLoggedIn) {
-				router.push("/");
-				return false;
-			}
-			return true;
-		};
+  useEffect(() => {
+    const checkAuth = () => {
+      const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"
+      if (!isLoggedIn) {
+        router.push("/")
+        return false
+      }
+      return true
+    }
 
-		const loadProducts = async () => {
-			if (checkAuth()) {
-				try {
-					setLoadingPage(true);
-					const data = await getProduct({
-						sort: "nutriscore_score",
-						page: currentPage,
-					});
-					setProducts(data.products || []); // pour éviter un crash si `products` est undefined
-					setFilteredProducts(data.products || []);
+    const loadProducts = async () => {
+      if (checkAuth()) {
+        try {
+          setLoading(true)
+          const data = await getProduct({
+            sort: "nutriscore_score",
+            page: currentPage,
+          })
+          setProducts(data.products || [])
+          setFilteredProducts(data.products || [])
+          if (data.pagination) {
+            setTotalPages(data.pagination)
+          }
+        } catch (error) {
+          console.error("Erreur lors du chargement des produits", error)
+        } finally {
+          setLoading(false)
+        }
+      } else {
+        setLoading(false)
+      }
+    }
 
-					// Mise à jour du nombre total de pages
-					if (data.pagination) {
-						// La pagination est envoyée directement comme un nombre entier
-						setTotalPages(data.pagination);
-					}
-				} catch (error) {
-					console.error(
-						"Erreur lors du chargement des produits",
-						error
-					);
-				} finally {
-					setLoadingPage(false);
-					setIsInitialLoad(false);
-				}
-			} else {
-				setIsInitialLoad(false);
-			}
-		};
+    if (searchTerm.trim() === "") {
+      loadProducts()
+    }
+  }, [router, currentPage, searchTerm])
 
-		loadProducts();
-	}, [router, currentPage]);
+  useEffect(() => {
+    const fetchSearchResults = async () => {
+      if (searchTerm.trim() === "") return
 
-	const handleSearch = (term: string) => {
-		setSearchTerm(term);
-		if (term.trim() === "") {
-			setFilteredProducts(products);
-		} else {
-			const filtered = products.filter((product) =>
-				product.name.toLowerCase().includes(term.toLowerCase())
-			);
-			setFilteredProducts(filtered);
-		}
-	};
+      setLoading(true)
+      try {
+        const token = localStorage.getItem("authToken")
+        const response = await fetch(`http://localhost:5000/search/${searchType}/${encodeURIComponent(searchTerm)}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (!response.ok) throw new Error("Erreur recherche")
 
-	const handleLogout = () => {
-		logout();
-		router.push("/");
-	};
+        const data = await response.json()
+        setProducts(data.products || [])
+        setFilteredProducts(data.products || [])
+        setTotalPages(1)
+      } catch (error) {
+        console.error("Erreur recherche : ", error)
+        setProducts([])
+        setFilteredProducts([])
+      } finally {
+        setLoading(false)
+      }
+    }
 
-	// Charger les produits de la page actuelle
-	const handlePageChange = (page: number) => {
-		if (page >= 1 && page <= totalPages && page !== currentPage) {
-			setCurrentPage(page);
-			window.scrollTo(0, 0); // Remonter en haut de la page
-			// Remettre à zéro la recherche lors du changement de page
-			setSearchTerm("");
-		}
-	};
+    if (searchTerm.trim() !== "") {
+      fetchSearchResults()
+    }
+  }, [searchTerm, searchType])
 
-	// Générer un tableau de pages à afficher (max 5 pages autour de la page courante)
-	const getPaginationRange = () => {
-		const range = [];
-		const maxPagesToShow = 5;
+  useEffect(() => {
+    let result = [...products]
 
-		let startPage = Math.max(
-			1,
-			currentPage - Math.floor(maxPagesToShow / 2)
-		);
-		let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+    if (filterNutriscore !== "all") {
+      result = result.filter((product) => product.nutrition_grades === filterNutriscore)
+    }
 
-		// Ajuster startPage si on est près de la fin
-		if (endPage - startPage + 1 < maxPagesToShow) {
-			startPage = Math.max(1, endPage - maxPagesToShow + 1);
-		}
+    setFilteredProducts(result)
+  }, [filterNutriscore, products])
 
-		for (let i = startPage; i <= endPage; i++) {
-			range.push(i);
-		}
+  const handleSearch = (term: string) => {
+    setSearchTerm(term)
+    setCurrentPage(1)
+  }
 
-		return range;
-	};
+  const handleFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setFilterNutriscore(event.target.value)
+  }
 
-	return (
-		<div className="min-h-screen bg-gray-100">
-			<div className="container mx-auto px-4 py-8">
-				<div className="flex justify-between items-center mb-6">
-					<h1 className="text-3xl font-bold">
-						Produits alimentaires
-					</h1>
-					<button
-						onClick={handleLogout}
-						className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-					>
-						Déconnexion
-					</button>
-				</div>
+  const handleSearchTypeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSearchType(event.target.value)
+    setSearchTerm("")
+  }
 
-				<SearchBar searchTerm={searchTerm} onSearch={handleSearch} />
+  const handleLogout = () => {
+    logout()
+    router.push("/")
+  }
 
-				{isInitialLoad ? (
-					<div className="flex flex-col justify-center items-center py-12 h-64">
-						<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-						<p className="text-gray-600">
-							Chargement initial des produits...
-						</p>
-					</div>
-				) : (
-					<>
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-							{loadingPage ? (
-								// Afficher des cartes squelettes pendant le chargement de la page
-								Array(9)
-									.fill(0)
-									.map((_, index) => (
-										<div
-											key={index}
-											className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse"
-										>
-											<div className="w-full h-48 bg-gray-300"></div>
-											<div className="p-4">
-												<div className="h-5 bg-gray-300 rounded w-3/4 mb-3"></div>
-												<div className="h-4 bg-gray-300 rounded w-1/2 mb-2"></div>
-												<div className="h-4 bg-gray-300 rounded w-1/2 mb-2"></div>
-												<div className="h-4 bg-gray-300 rounded w-2/3 mb-2"></div>
-												<div className="h-4 bg-gray-300 rounded w-1/3 mt-4"></div>
-											</div>
-										</div>
-									))
-							) : filteredProducts.length > 0 ? (
-								filteredProducts.map((product) => (
-									<div
-										key={product.id}
-										className="bg-white rounded-xl shadow-md overflow-hidden"
-									>
-										<img
-											src={product.image_thumb_url}
-											alt={
-												product.product_name ||
-												"Produit"
-											}
-											className="w-full h-48 object-cover"
-										/>
-										<div className="p-4">
-											<h3 className="text-lg font-semibold mb-1">
-												{product.product_name}
-											</h3>
-											<p className="text-sm text-gray-700">
-												Nutriscore :{" "}
-												{product.nutrition_grades}
-											</p>
-											<p className="text-sm text-gray-700">
-												Nova : {product.nova_group}
-											</p>
-											<p className="text-sm text-gray-700">
-												Ecoscore :{" "}
-												{product.ecoscore_grade}
-											</p>
-											<p className="text-sm text-gray-700">
-												Magasin : {product.stores}
-											</p>
-											<div className="flex justify-between items-center mt-4">
-												<a
-													href={product.url}
-													target="_blank"
-													rel="noopener noreferrer"
-													className="text-blue-600 hover:underline text-sm"
-												>
-													Détails
-												</a>
-											</div>
-										</div>
-									</div>
-								))
-							) : (
-								<p className="text-gray-600 col-span-3 text-center py-8">
-									Aucun produit trouvé.
-								</p>
-							)}
-						</div>
+  const renderPageNumbers = () => {
+    if (totalPages <= 1) return null
 
-						{/* Pagination */}
-						{totalPages > 1 && (
-							<div className="flex justify-center items-center mt-8 mb-8">
-								<nav className="flex flex-wrap items-center space-x-1 md:space-x-2">
-									<button
-										onClick={() =>
-											handlePageChange(currentPage - 1)
-										}
-										disabled={
-											currentPage === 1 || loadingPage
-										}
-										className={`px-3 py-1 rounded-md ${
-											currentPage === 1 || loadingPage
-												? "bg-gray-200 text-gray-500 cursor-not-allowed"
-												: "bg-gray-200 text-gray-700 hover:bg-gray-300"
-										}`}
-									>
-										&laquo;
-									</button>
+    const pages = []
+    const maxPagesToShow = 5
+    let start = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2))
+    const end = Math.min(totalPages, start + maxPagesToShow - 1)
 
-									{getPaginationRange().map((page) => (
-										<button
-											key={page}
-											onClick={() =>
-												handlePageChange(page)
-											}
-											disabled={loadingPage}
-											className={`px-3 py-1 rounded-md ${
-												currentPage === page
-													? "bg-blue-500 text-white"
-													: loadingPage
-													? "bg-gray-200 text-gray-500 cursor-not-allowed"
-													: "bg-gray-200 text-gray-700 hover:bg-gray-300"
-											}`}
-										>
-											{page}
-										</button>
-									))}
+    if (end - start < maxPagesToShow - 1) {
+      start = Math.max(1, end - maxPagesToShow + 1)
+    }
 
-									<button
-										onClick={() =>
-											handlePageChange(currentPage + 1)
-										}
-										disabled={
-											currentPage === totalPages ||
-											loadingPage
-										}
-										className={`px-3 py-1 rounded-md ${
-											currentPage === totalPages ||
-											loadingPage
-												? "bg-gray-200 text-gray-500 cursor-not-allowed"
-												: "bg-gray-200 text-gray-700 hover:bg-gray-300"
-										}`}
-									>
-										&raquo;
-									</button>
+    for (let i = start; i <= end; i++) {
+      pages.push(
+        <button
+          key={i}
+          onClick={() => setCurrentPage(i)}
+          className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
+            currentPage === i
+              ? "bg-emerald-600 text-white font-semibold"
+              : "bg-white text-emerald-600 border border-emerald-200 hover:bg-emerald-50"
+          }`}
+        >
+          {i}
+        </button>,
+      )
+    }
 
-									{loadingPage && (
-										<span className="ml-2 text-sm text-gray-600 flex items-center">
-											<div className="w-4 h-4 border-2 border-gray-400 border-t-blue-500 rounded-full animate-spin mr-2"></div>
-											Chargement...
-										</span>
-									)}
-								</nav>
-							</div>
-						)}
-					</>
-				)}
-			</div>
-		</div>
-	);
+    return pages
+  }
+
+  // 🔄 Récupérer un produit par code-barres
+  const fetchProductByBarcode = async (code: string) => {
+    try {
+      setLoading(true)
+      const token = localStorage.getItem("authToken")
+
+      const response = await fetch(`http://localhost:5000/product/${code}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        alert("Produit non trouvé")
+        throw new Error("Produit non trouvé")
+      }
+
+      const data = await response.json()
+
+      if (data && data.product) {
+        setProducts([data.product])
+        setFilteredProducts([data.product])
+        setTotalPages(1)
+        setSearchTerm("")
+      } else {
+        setProducts([])
+        setFilteredProducts([])
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération du produit :", error)
+      setProducts([])
+      setFilteredProducts([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Fonction pour obtenir la couleur du Nutriscore
+  const getNutriscoreColor = (score: string) => {
+    const colors = {
+      a: "bg-green-500",
+      b: "bg-light-green-500",
+      c: "bg-yellow-500",
+      d: "bg-orange-500",
+      e: "bg-red-500",
+    }
+    return colors[score.toLowerCase() as keyof typeof colors] || "bg-gray-400"
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <header className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-emerald-800">Produits alimentaires</h1>
+            <p className="text-emerald-600 mt-1">Découvrez des produits sains et écologiques</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setScannerOpen(true)}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-full transition-all shadow-md hover:shadow-lg"
+            >
+              <Scan size={18} />
+              <span>Scanner un code-barres</span>
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 bg-white hover:bg-red-50 text-red-600 border border-red-200 font-medium py-2.5 px-4 rounded-full transition-all"
+            >
+              <LogOut size={18} />
+              <span className="hidden sm:inline">Déconnexion</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Scanner Modal */}
+        <BarcodeScannerModal
+          isOpen={isScannerOpen}
+          onClose={() => setScannerOpen(false)}
+          onScan={(result) => {
+            console.log("Scanned code: ", result)
+            setScannedCode(result)
+            fetchProductByBarcode(result)
+            setScannerOpen(false)
+          }}
+        />
+
+        {/* Scanned Code Display */}
+        {scannedCode && (
+          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+            <p className="text-emerald-800">
+              Code scanné : <strong>{scannedCode}</strong>
+            </p>
+          </div>
+        )}
+
+        {/* Search and Filters */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-8">
+          <div className="flex flex-col md:flex-row md:items-end gap-4">
+            <div className="w-full md:w-1/2">
+              <label className="block mb-2 text-sm font-medium text-gray-700">Rechercher un produit</label>
+              <div className="relative">
+                <SearchBar onSearch={handleSearch} />
+                <Search className="absolute right-3 top-3 text-gray-400" size={20} />
+              </div>
+            </div>
+
+            <div className="w-full md:w-1/4">
+              <label className="block mb-2 text-sm font-medium text-gray-700">Recherche par</label>
+              <select
+                value={searchType}
+                onChange={handleSearchTypeChange}
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-800 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+              >
+                <option value="category">Par Catégorie</option>
+                <option value="brand">Par Marque</option>
+              </select>
+            </div>
+
+            <div className="w-full md:w-1/4">
+              <label className="block mb-2 text-sm font-medium text-gray-700">Filtrer par Nutriscore</label>
+              <select
+                value={filterNutriscore}
+                onChange={handleFilterChange}
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-800 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+              >
+                <option value="all">Tous les Nutriscores</option>
+                <option value="a">Nutriscore A</option>
+                <option value="b">Nutriscore B</option>
+                <option value="c">Nutriscore C</option>
+                <option value="d">Nutriscore D</option>
+                <option value="e">Nutriscore E</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Filter Toggle */}
+        <div className="md:hidden mb-4">
+          <button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className="w-full flex items-center justify-center gap-2 py-2 bg-white border border-gray-200 rounded-lg text-gray-700"
+          >
+            <Filter size={18} />
+            {isFilterOpen ? "Masquer les filtres" : "Afficher les filtres"}
+          </button>
+        </div>
+
+        {/* Products Grid */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="animate-spin text-emerald-600 mb-4" size={40} />
+            <p className="text-emerald-800 font-medium">Chargement des produits...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 transition-all hover:shadow-lg"
+                >
+                  <div className="relative h-56 overflow-hidden">
+                    <img
+                      src={product.image_url || "/placeholder.svg"}
+                      alt={product.product_name || "Produit"}
+                      className="w-full h-full object-cover transition-transform hover:scale-105"
+                    />
+                    <div className="absolute top-3 right-3">
+                      <span
+                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-white font-bold ${getNutriscoreColor(product.nutrition_grades)}`}
+                      >
+                        {product.nutrition_grades?.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <h3 className="text-lg font-semibold mb-2 text-gray-800 line-clamp-2">{product.product_name}</h3>
+
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      <div className="bg-gray-50 p-2 rounded-lg">
+                        <p className="text-xs text-gray-500">Nova</p>
+                        <p className="text-sm font-medium">{product.nova_group || "N/A"}</p>
+                      </div>
+                      <div className="bg-gray-50 p-2 rounded-lg">
+                        <p className="text-xs text-gray-500">Ecoscore</p>
+                        <p className="text-sm font-medium">{product.ecoscore_grade?.toUpperCase() || "N/A"}</p>
+                      </div>
+                    </div>
+
+                    {product.stores && (
+                      <div className="mb-4">
+                        <p className="text-xs text-gray-500 mb-1">Disponible chez</p>
+                        <p className="text-sm text-gray-700 bg-emerald-50 px-2 py-1 rounded inline-block">
+                          {product.stores}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="mt-4 pt-3 border-t border-gray-100">
+                      <a
+                        href={product.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full text-emerald-600 hover:text-emerald-700 font-medium py-2 hover:bg-emerald-50 rounded-lg transition-colors"
+                      >
+                        <ExternalLink size={16} />
+                        Voir les détails
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-3 flex flex-col items-center justify-center py-16 text-center">
+                <div className="bg-gray-100 rounded-full p-4 mb-4">
+                  <Search className="text-gray-400" size={32} />
+                </div>
+                <p className="text-gray-600 text-lg font-medium">Aucun produit trouvé</p>
+                <p className="text-gray-500 mt-2">Essayez de modifier vos critères de recherche</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {searchTerm.trim() === "" && totalPages > 1 && (
+          <div className="flex flex-wrap justify-center items-center mt-10 gap-2">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="flex items-center gap-1 px-4 py-2 bg-white text-emerald-600 rounded-full border border-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-50 transition-colors"
+            >
+              <ChevronLeft size={16} />
+              Précédent
+            </button>
+
+            <div className="flex gap-2 mx-2">{renderPageNumbers()}</div>
+
+            <button
+              onClick={() => setCurrentPage((prev) => (totalPages && prev < totalPages ? prev + 1 : prev))}
+              disabled={currentPage >= totalPages}
+              className="flex items-center gap-1 px-4 py-2 bg-white text-emerald-600 rounded-full border border-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-50 transition-colors"
+            >
+              Suivant
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
