@@ -17,7 +17,7 @@ export default function Produits() {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [searchTerm, setSearchTerm] = useState<string>("")
   const [searchType, setSearchType] = useState<string>("category")
-  const [filterNutriscore, setFilterNutriscore] = useState<string>("all")
+  const [filterNutriscore, setFilterNutriscore] = useState<string >("")
   const [loading, setLoading] = useState<boolean>(true)
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [totalPages, setTotalPages] = useState<number>(1)
@@ -26,43 +26,46 @@ export default function Produits() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   useEffect(() => {
-    const checkAuth = () => {
-      const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"
-      if (!isLoggedIn) {
-        router.push("/")
-        return false
-      }
-      return true
-    }
-
-    const loadProducts = async () => {
-      if (checkAuth()) {
-        try {
-          setLoading(true)
-          const data = await getProduct({
-            sort: "popularity_key",
-            page: currentPage,
-          })
-          setProducts(data.products || [])
-          setFilteredProducts(data.products || [])
-          if (data.pagination) {
-            setTotalPages(data.pagination)
-          }
-        } catch (error) {
-          console.error("Erreur lors du chargement des produits", error)
-        } finally {
-          setLoading(false)
-        }
-      } else {
-        setLoading(false)
-      }
-    }
-
+    checkAuth()
+    
     if (searchTerm.trim() === "") {
       loadProducts()
     }
-  }, [router, currentPage, searchTerm])
-
+  }, [router, currentPage, searchTerm, filterNutriscore]) // Ajouté filterNutriscore comme dépendance
+  
+  const checkAuth = () => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true"
+    if (!isLoggedIn) {
+      router.push("/")
+      return false
+    }
+    return true
+  }
+  
+  const loadProducts = async () => {
+    if (checkAuth()) {
+      try {
+        setLoading(true)
+        const data = await getProduct({
+          sort: "popularity_key",
+          nutriscore: filterNutriscore,
+          page: currentPage,
+        })
+        setProducts(data.products || [])
+        setFilteredProducts(data.products || [])
+        if (data.pagination) {
+          setTotalPages(data.pagination)
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des produits", error)
+      } finally {
+        setLoading(false)
+      }
+    } else {
+      setLoading(false)
+    }
+  }
+  
   useEffect(() => {
     const fetchSearchResults = async () => {
       if (searchTerm.trim() === "") return
@@ -98,7 +101,8 @@ export default function Produits() {
   useEffect(() => {
     let result = [...products]
 
-    if (filterNutriscore !== "all") {
+    if (filterNutriscore !== "") {
+      // Correction de la condition ici: vérifier si filterNutriscore n'est pas vide
       result = result.filter((product) => product.nutrition_grades === filterNutriscore)
     }
 
@@ -112,6 +116,7 @@ export default function Produits() {
 
   const handleFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setFilterNutriscore(event.target.value)
+    // Suppression de l'appel à loadProducts() ici, car le useEffect avec les dépendances s'en chargera
   }
 
   const handleSearchTypeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -277,17 +282,14 @@ export default function Produits() {
             </div>
 
             <div className="w-full md:w-1/4">
-              <label className="block mb-2 text-sm font-medium text-gray-700">Filtrer par Nutriscore</label>
+              <label className="block mb-2 text-sm font-medium text-gray-700">Filtrer par</label>
               <select
                 value={filterNutriscore}
                 onChange={handleFilterChange}
                 className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white text-gray-800 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
               >
-                <option value="all">Tous les Nutriscores</option>
+                <option value="">Tous les Produits</option>
                 <option value="a">Nutriscore A</option>
-                <option value="b">Nutriscore B</option>
-                <option value="c">Nutriscore C</option>
-                <option value="d">Nutriscore D</option>
                 <option value="e">Nutriscore E</option>
               </select>
             </div>

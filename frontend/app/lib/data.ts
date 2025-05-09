@@ -1,10 +1,12 @@
 interface ProductQuery {
 	sort?: string;
+	nutriscore?: string;
 	page?: number;
 }
 
 export const getProduct = async ({
 	sort = "popularity_key",
+	nutriscore = "",
 	page = 1,
 }: ProductQuery) => {
 	try {
@@ -16,7 +18,7 @@ export const getProduct = async ({
 				"Content-Type": "application/json",
 				Authorization: `Bearer ${token}`,
 			},
-			body: JSON.stringify({ sort, page }),
+			body: JSON.stringify({ sort,nutriscore, page }),
 		});
 
 		if (!response.ok) {

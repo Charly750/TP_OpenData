@@ -63,7 +63,7 @@ def token_required(f):
     return decorated
 
 # Fonction pour précharger une page spécifique avec réessais
-def preload_single_page(sort, page, max_retries=10, retry_delay=5):
+def preload_single_page(sort,nutriscore, page, max_retries=10, retry_delay=5):
     """
     Précharge une seule page et l'ajoute au cache
     
@@ -76,7 +76,7 @@ def preload_single_page(sort, page, max_retries=10, retry_delay=5):
     Returns:
         bool: True si réussi, False sinon
     """
-    cache_key = f'product_list_{sort}_{page}'
+    cache_key = f'product_list_{sort}_{nutriscore}_{page}'
     
     # Vérifie si cette combinaison existe déjà dans le cache
     if cache.get(cache_key):
@@ -91,9 +91,12 @@ def preload_single_page(sort, page, max_retries=10, retry_delay=5):
             if retries > 0:
                 print(f"Tentative {retries+1}/{max_retries} pour {cache_key}...")
             else:
-                print(f"Préchargement de la page {page} avec tri {sort}...")
+                print(f"Préchargement de la page {page} avec tri {sort} et nutriscore {nutriscore}...")
                 
-            url = f'https://world.openfoodfacts.org/api/v2/search?sort_by={sort}&countries_tags=en:france|fr:france&page={page}&page_size=51'
+            if nutriscore == "":
+                    url = f'https://world.openfoodfacts.org/api/v2/search?sort_by={sort}&countries_tags=en:france|fr:france&page={page}&page_size=51'
+            else:
+                    url = f'https://world.openfoodfacts.org/api/v2/search?sort_by={sort}&countries_tags=en:france|fr:france&nutriscore_score={nutriscore}&page={page}&page_size=51'
             response = requests.get(url, timeout=100)  # Ajout d'un timeout
             response.raise_for_status()
             results = response.json()
@@ -131,10 +134,11 @@ def preload_product_cache_thread():
     """
     print("Démarrage du préchargement du cache en arrière-plan...")
     sort_options = ['popularity_key']  # Options de tri courantes
+    nustriscore_options = ["", 'a','f']  # Valeur par défaut pour le nutriscore
     max_pages = 20  # Nombre de pages à précharger par option de tri
     
     # Créer la liste de toutes les combinaisons sort/page à précharger
-    tasks = [(sort, page) for sort in sort_options for page in range(1, max_pages + 1)]
+    tasks = [(sort,nutriscore, page) for sort in sort_options for nutriscore in nustriscore_options for page in range(1, max_pages + 1)]
     
     # Première passe avec le ThreadPoolExecutor
     failed_tasks = []
@@ -143,19 +147,19 @@ def preload_product_cache_thread():
     print("Première passe de préchargement...")
     with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
         # Soumettre toutes les tâches à l'exécuteur
-        future_to_task = {executor.submit(preload_single_page, sort, page): (sort, page) for sort, page in tasks}
+        future_to_task = {executor.submit(preload_single_page, sort,nutriscore, page): (sort,nutriscore, page) for sort,nutriscore, page in tasks}
         
         # Récupérer les résultats au fur et à mesure qu'ils sont terminés
         for future in concurrent.futures.as_completed(future_to_task):
-            sort, page = future_to_task[future]
+            sort,nutriscore, page = future_to_task[future]
             try:
                 success = future.result()
                 if not success:
-                    print(f"Échec du préchargement pour sort={sort}, page={page}, ajouté à la liste de réessai")
-                    failed_tasks.append((sort, page))
+                    print(f"Échec du préchargement pour sort={sort},nutriscore={nutriscore}, page={page}, ajouté à la liste de réessai")
+                    failed_tasks.append((sort,nutriscore, page))
             except Exception as exc:
-                print(f"Erreur inattendue lors du préchargement de sort={sort}, page={page}: {exc}")
-                failed_tasks.append((sort, page))
+                print(f"Erreur inattendue lors du préchargement de sort={sort},,nutriscore={nutriscore} page={page}: {exc}")
+                failed_tasks.append((sort,nutriscore, page))
     
     # Réessai des tâches échouées avec un délai plus long entre les tentatives
     if failed_tasks:
@@ -172,11 +176,11 @@ def preload_product_cache_thread():
                 
                 # Traiter chaque tâche échouée séquentiellement avec un délai plus long
                 for sort, page in remaining_tasks:
-                    print(f"Réessai de préchargement pour sort={sort}, page={page}")
+                    print(f"Réessai de préchargement pour sort={sort},nutriscore={nutriscore}, page={page}")
                     # Utiliser un délai plus long pour les réessais (8 secondes)
-                    success = preload_single_page(sort, page, max_retries=3, retry_delay=8)
+                    success = preload_single_page(sort,nutriscore, page, max_retries=3, retry_delay=8)
                     if not success:
-                        still_failed.append((sort, page))
+                        still_failed.append((sort,nutriscore, page))
                     # Petit délai entre chaque réessai pour ne pas surcharger l'API
                     time.sleep(2)
                 
@@ -249,15 +253,19 @@ def auth():
 def get_product(current_user):
     data = request.get_json()
     sort = data.get('sort', 'popularity_key')
+    nutriscore = data.get('nutriscore', "")
     page = data.get('page', 1)
-    cache_key = f'product_list_{sort}_{page}'
+    cache_key = f'product_list_{sort}_{nutriscore}_{page}'
 
     cached_data = cache.get(cache_key)
     if cached_data:
         return jsonify(cached_data), 200
 
     try:
-        url = f'https://world.openfoodfacts.org/api/v2/search?sort_by={sort}&countries_tags=en:france|fr:france&page={page}&page_size=51'
+        if nutriscore == "":
+            url = f'https://world.openfoodfacts.org/api/v2/search?sort_by={sort}&countries_tags=en:france|fr:france&page={page}&page_size=51'
+        else:
+            url = f'https://world.openfoodfacts.org/api/v2/search?sort_by={sort}&countries_tags=en:france|fr:france&nutriscore_score={nutriscore}&page={page}&page_size=51'
         response = requests.get(url)
         response.raise_for_status()
         results = response.json()
@@ -347,7 +355,6 @@ def get_history(current_user):
     ]
     return jsonify(result), 200
 
-# Endpoint pour vérifier le statut du préchargement du cache
 @app.route('/cache/status', methods=['GET'])
 @token_required
 def cache_status(current_user):
@@ -355,45 +362,49 @@ def cache_status(current_user):
     Permet de vérifier l'état du cache (combien de pages sont préchargées)
     """
     sort_options = ['popularity_key']
+    nutriscore_options = ["", 'a', 'f']
     max_pages = 20
-    
+
     status = {}
     total_cached = 0
-    total_possible = len(sort_options) * max_pages
+    total_possible = len(sort_options) * len(nutriscore_options) * max_pages
     missing_pages = []
-    
+
     for sort in sort_options:
-        status[sort] = []
-        for page in range(1, max_pages + 1):
-            cache_key = f'product_list_{sort}_{page}'
-            is_cached = cache.get(cache_key) is not None
-            status[sort].append({
-                'page': page,
-                'cached': is_cached
-            })
-            if is_cached:
-                total_cached += 1
-            else:
-                missing_pages.append({'sort': sort, 'page': page})
-    
+        status[sort] = {}
+        for nutriscore in nutriscore_options:
+            nutri_key = nutriscore 
+            status[sort][nutri_key] = []
+
+            for page in range(1, max_pages + 1):
+                cache_key = f'product_list_{sort}_{nutriscore}_{page}'
+                is_cached = cache.get(cache_key) is not None
+                status[sort][nutri_key].append({
+                    'page': page,
+                    'cached': is_cached
+                })
+                if is_cached:
+                    total_cached += 1
+                else:
+                    missing_pages.append({'sort': sort, 'nutriscore': nutriscore, 'page': page})
+
     completion_percentage = (total_cached / total_possible) * 100 if total_possible > 0 else 0
-    
+
     # Si des pages sont manquantes, lancer un thread pour les charger
     if missing_pages:
         def reload_missing_pages():
             print(f"Tentative de rechargement de {len(missing_pages)} pages manquantes...")
             for item in missing_pages:
-                sort, page = item['sort'], item['page']
-                print(f"Rechargement de la page manquante: sort={sort}, page={page}")
-                preload_single_page(sort, page, max_retries=3, retry_delay=5)
-                time.sleep(1)  # Petit délai entre chaque chargement
+                sort, nutriscore, page = item['sort'], item['nutriscore'], item['page']
+                print(f"Rechargement de la page manquante: sort={sort}, nutriscore={nutriscore}, page={page}")
+                preload_single_page(sort, page, nutriscore=nutriscore, max_retries=3, retry_delay=5)
+                time.sleep(1)
             print("Rechargement des pages manquantes terminé")
-        
-        # Démarrer le thread de rechargement
+
         reload_thread = threading.Thread(target=reload_missing_pages)
         reload_thread.daemon = True
         reload_thread.start()
-    
+
     return jsonify({
         'status': status,
         'summary': {
@@ -404,6 +415,7 @@ def cache_status(current_user):
             'reload_triggered': len(missing_pages) > 0
         }
     }), 200
+
 
 # Lancement de l'application Flask
 if __name__ == '__main__':
