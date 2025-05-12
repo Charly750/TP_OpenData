@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useParams } from "next/navigation";
 import { useEffect } from "react";
-
+import Link from "next/link";
 // Define interface for nutrient info
 interface NutrientInfo {
 	name: string;
@@ -554,7 +554,17 @@ export default function ProductDetail() {
 										<p className="text-sm text-emerald-700">
 											{item.brands}
 										</p>
+										<p>
+										<Link
+												className="flex items-center justify-center gap-2 w-full text-emerald-600 hover:text-emerald-700 font-medium py-2 hover:bg-emerald-50 rounded-lg transition-colors"
+
+												href={`/detail/${item.id}`}
+											>
+												Voir le produit
+											</Link>
+										</p>
 									</div>
+									
 								</div>
 							))}
 						</div>
