@@ -34,13 +34,17 @@ export default function ProductDetail() {
 	const [recommended, setRecommended] = useState([]);
 
 	useEffect(() => {
-		if (!product?.categories?.[0]) return;
+		if (!product?.categories_tags || product.categories_tags.length < 2)
+			return;
+
+		const categoryTag =
+			product.categories_tags[product.categories_tags.length - 2];
 
 		const fetchRecommended = async () => {
 			try {
 				const res = await fetch(
 					`http://localhost:5000/product/recommendation?category=${encodeURIComponent(
-						product.categories[0]
+						categoryTag
 					)}`
 				);
 				const data = await res.json();
