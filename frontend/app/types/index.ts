@@ -1,10 +1,20 @@
 export interface Product {
-	id: number;
-	name: string;
+	id: string;
+	product_name: string;
+	brand: string;
 	description: string;
-	nutriScore: "A" | "B" | "C" | "D" | "E";
-	novaScore: "1" | "2" | "3" | "4" | "5";
-	greenScore: "A" | "B" | "C" | "D" | "E";
+	image_url: string;
+	nutrition_grades: string;
+	nova_group: number;
+	ecoscore_grade: string;
+	quantity: string;
+	ingredients: string;
+	allergens: string;
+	stores: string;
+	origin: string;
+	labels: string[]; // tableau de chaînes
+	nutriscore_image: string;
+	url: string;
 }
 
 export interface UserData {
@@ -25,4 +35,11 @@ export interface RegisterResponse {
 	success: boolean;
 	message?: string;
 	error?: string;
+}
+
+export interface NutrientInfo {
+	name: string;
+	value: string;
+	unit: string;
+	level: "low" | "medium" | "high"; // optionnel : tu peux le restreindre
 }
