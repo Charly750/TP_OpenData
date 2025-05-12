@@ -279,6 +279,25 @@ def get_product(current_user):
     except requests.exceptions.RequestException as e:
         return jsonify({'error': f'Erreur de requête externe : {str(e)}'}), 400
 
+@app.route('/product/recommandation', methods=['POST'])
+# @token_required
+def get_product_recommandation():
+    data = request.get_json()
+    categories = data.get('categories')
+    sort = data.get('sort', 'popularity_key')
+    print(f"Catégorie : {categories}")
+    try:
+        url = f'https://world.openfoodfacts.org/api/v2/search?sort_by={sort}&categories_tags={categories}&countries_tags=en:france|fr:france&page=1&page_size=4'
+        response = requests.get(url)
+        response.raise_for_status()
+        results = response.json()
+
+        print(f"Réponse : {results}")
+        return jsonify(results), 200
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Erreur de requête externe : {str(e)}'}), 400
+
 # Recherche de produit par code-barres avec historique
 @app.route('/product/<string:product_code>', methods=['GET'])
 @token_required
