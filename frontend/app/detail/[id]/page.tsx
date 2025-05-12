@@ -33,33 +33,37 @@ export default function ProductDetail() {
 
 	const [recommended, setRecommended] = useState([]);
 
-	useEffect(() => {
-		if (!product?.categories_tags || product.categories_tags.length < 2)
-			return;
 
-		const categoryTag =
-			product.categories_tags[product.categories_tags.length - 2];
+	const fetchRecommended = async () => {
+		try {
+			console.log(product)
+			if (!product?.categories_tags || product.categories_tags.length < 2)
+				return;
 
-		const fetchRecommended = async () => {
-			try {
-				const res = await fetch(
-					`http://localhost:5000/product/recommendation?category=${encodeURIComponent(
-						categoryTag
-					)}`
-				);
-				const data = await res.json();
-				setRecommended(data.slice(0, 4)); // limite à 4 produits
-			} catch (err) {
-				console.error(
-					"Erreur lors du chargement des recommandations :",
-					err
-				);
-			}
-		};
+			const categoryTag =
+				product.categories_tags[product.categories_tags.length - 2];
+			console.log(categoryTag);
+			const token = localStorage.getItem("authToken"); // ou AsyncStorage.getItem pour React Native
 
-		fetchRecommended();
-	}, [product]);
+			const response = await fetch("http://localhost:5000/product/recommendation", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({ categoryTag }),
+			});
+			const data = await response.json();
+			console.log(data);
+			setRecommended(data.slice(0, 4)); // limite à 4 produits
 
+		} catch (err) {
+			console.error(
+				"Erreur lors du chargement des recommandations :",
+				err
+			);
+		}
+	};
 	useEffect(() => {
 		fetch(`https://world.openfoodfacts.org/api/v2/product/${id}`)
 			.then((res) => {
@@ -130,11 +134,15 @@ export default function ProductDetail() {
 				].filter((n) => n.value !== undefined);
 
 				setNutrients(nutrientList);
+
 				setLoading(false);
 			})
 			.catch((err) => {
 				setError(err.message);
 				setLoading(false);
+			})
+			.finally(() => {
+				fetchRecommended();
 			});
 	}, [id]);
 
@@ -355,9 +363,9 @@ export default function ProductDetail() {
 												{nutrient.level === "low"
 													? "Faible"
 													: nutrient.level ===
-													  "medium"
-													? "Moyen"
-													: "Élevé"}
+														"medium"
+														? "Moyen"
+														: "Élevé"}
 											</span>
 										</div>
 									</div>
