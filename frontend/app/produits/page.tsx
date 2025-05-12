@@ -168,11 +168,10 @@ export default function Produits() {
 				<button
 					key={i}
 					onClick={() => setCurrentPage(i)}
-					className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
-						currentPage === i
+					className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${currentPage === i
 							? "bg-emerald-600 text-white font-semibold"
 							: "bg-white text-emerald-600 border border-emerald-200 hover:bg-emerald-50"
-					}`}
+						}`}
 				>
 					{i}
 				</button>
@@ -434,15 +433,10 @@ export default function Produits() {
 										)}
 
 										<div className="mt-4 pt-3 border-t border-gray-100">
-											<button
-												onClick={() =>
-													goToDetails(product.id)
-												}
-												className="flex items-center justify-center gap-2 w-full text-emerald-600 hover:text-emerald-700 font-medium py-2 hover:bg-emerald-50 rounded-lg transition-colors"
-											>
-												Voir les détails
-											</button>
+
 											<Link
+												className="flex items-center justify-center gap-2 w-full text-emerald-600 hover:text-emerald-700 font-medium py-2 hover:bg-emerald-50 rounded-lg transition-colors"
+
 												href={`/detail/${product.id}`}
 											>
 												Voir le produit
