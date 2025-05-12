@@ -15,11 +15,22 @@ import { Badge } from "@/components/ui/badge";
 import { useParams } from "next/navigation";
 import { useEffect } from "react";
 
+// Define interface for nutrient info
 interface NutrientInfo {
 	name: string;
 	value: string;
 	unit: string;
-	level: "low" | "medium" | "high";
+	level?: "low" | "medium" | "high";
+}
+
+// Define interface for recommended product
+interface RecommendedProduct {
+	id: string;
+	product_name: string;
+	brand: string;
+	description: string;
+	image_url: string;
+	nutrition_grades: string;
 }
 
 export default function ProductDetail() {
@@ -27,14 +38,37 @@ export default function ProductDetail() {
 
 	const { id } = useParams();
 	const [product, setProduct] = useState(null);
-	const [nutrients, setNutrients] = useState([]);
+	const [nutrients, setNutrients] = useState<NutrientInfo[]>([]);
 	const [error, setError] = useState(null);
 	const [loading, setLoading] = useState(true);
+	const [isLoading, setIsLoading] = useState(true);
 
-	const [recommended, setRecommended] = useState([]);
+	const [recommended, setRecommended] = useState<RecommendedProduct[]>([]);
 
+	const getNutriscoreColor = (grade: string) => {
+		const grades: Record<string, string> = {
+			a: "bg-green-600",
+			b: "bg-light-green-600",
+			c: "bg-yellow-600",
+			d: "bg-orange-600",
+			e: "bg-red-600",
+		};
+		return grades[grade?.toLowerCase()] || "bg-gray-400";
+	};
 
-	
+	const getNutrientLevelColor = (level: string) => {
+		const levels: Record<string, string> = {
+			low: "bg-green-100 text-green-800",
+			medium: "bg-yellow-100 text-yellow-800",
+			high: "bg-red-100 text-red-800",
+		};
+		return levels[level] || "bg-gray-100 text-gray-800";
+	};
+
+	const incrementQuantity = () => setQuantity((prev) => prev + 1);
+	const decrementQuantity = () =>
+		setQuantity((prev) => Math.max(1, prev - 1));
+
 	useEffect(() => {
 		fetch(`https://world.openfoodfacts.org/api/v2/product/${id}`)
 			.then((res) => {
@@ -65,7 +99,7 @@ export default function ProductDetail() {
 				});
 
 				const nutriments = p.nutriments || {};
-				const nutrientList = [
+				const nutrientList: NutrientInfo[] = [
 					{
 						name: "Énergie",
 						value: nutriments["energy-kcal_100g"],
@@ -105,38 +139,52 @@ export default function ProductDetail() {
 				].filter((n) => n.value !== undefined);
 
 				setNutrients(nutrientList);
-				
+
 				const fetchRecommended = async () => {
 					try {
-
-					
-			
 						const categoryTag =
 							p.categories_tags[p.categories_tags.length - 2];
-						console.log("je suis la " + categoryTag);
-						const token = localStorage.getItem("authToken"); // ou AsyncStorage.getItem pour React Native
+						
+						const token = localStorage.getItem("authToken");
 						const bodyData = { categories: categoryTag };
-						console.log("je suis la " + bodyData);
+						
 						const response = await fetch("http://localhost:5000/product/recommandation", {
 							method: "POST",
 							headers: {
 								"Content-Type": "application/json",
 								Authorization: `Bearer ${token}`,
 							},
-							
 							body: JSON.stringify(bodyData)
 						});
+						
+						if (!response.ok) {
+							throw new Error("Erreur lors de la récupération des recommandations");
+						}
+						
 						const data = await response.json();
-						console.log(data);
-						setRecommended(data.slice(0, 4)); // limite à 4 produits
-			
+						
+						// Validate and type the recommended products
+						const validatedRecommended: RecommendedProduct[] = data.products.map((item: any) => ({
+							id: item.id || '',
+							product_name: item.product_name || 'Produit sans nom',
+							brand: item.brand || 'Marque inconnue',
+							description: item.description || 'Aucune description disponible',
+							image_url: item.image_url || '/placeholder.svg',
+							nutrition_grades: item.nutrition_grades || 'N/A'
+						}));
+						
+						setRecommended(validatedRecommended);
+						setIsLoading(false);
 					} catch (err) {
 						console.error(
 							"Erreur lors du chargement des recommandations :",
 							err
 						);
+						// Optionally set an empty array if recommendations fail to load
+						setRecommended([]);
 					}
 				};
+
 				fetchRecommended();
 
 				setLoading(false);
@@ -144,38 +192,11 @@ export default function ProductDetail() {
 			.catch((err) => {
 				setError(err.message);
 				setLoading(false);
-			})
-			.finally(() => {
-				
 			});
 	}, [id]);
 
 	if (loading) return <p>Chargement...</p>;
 	if (error) return <p>Erreur : {error}</p>;
-
-	const getNutriscoreColor = (grade: string) => {
-		const grades: Record<string, string> = {
-			a: "bg-green-600",
-			b: "bg-light-green-600",
-			c: "bg-yellow-600",
-			d: "bg-orange-600",
-			e: "bg-red-600",
-		};
-		return grades[grade?.toLowerCase()] || "bg-gray-400";
-	};
-
-	const getNutrientLevelColor = (level: string) => {
-		const levels: Record<string, string> = {
-			low: "bg-green-100 text-green-800",
-			medium: "bg-yellow-100 text-yellow-800",
-			high: "bg-red-100 text-red-800",
-		};
-		return levels[level] || "bg-gray-100 text-gray-800";
-	};
-
-	const incrementQuantity = () => setQuantity((prev) => prev + 1);
-	const decrementQuantity = () =>
-		setQuantity((prev) => Math.max(1, prev - 1));
 
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
@@ -359,18 +380,20 @@ export default function ProductDetail() {
 												{nutrient.value}
 												{nutrient.unit}
 											</span>
-											<span
-												className={`text-xs px-2 py-1 rounded-full ${getNutrientLevelColor(
-													nutrient.level
-												)}`}
-											>
-												{nutrient.level === "low"
-													? "Faible"
-													: nutrient.level ===
-														"medium"
+											{nutrient.level && (
+												<span
+													className={`text-xs px-2 py-1 rounded-full ${getNutrientLevelColor(
+														nutrient.level
+													)}`}
+												>
+													{nutrient.level === "low"
+														? "Faible"
+														: nutrient.level ===
+														  "medium"
 														? "Moyen"
 														: "Élevé"}
-											</span>
+												</span>
+											)}
 										</div>
 									</div>
 								))}
@@ -503,45 +526,48 @@ export default function ProductDetail() {
 					</Tabs>
 				</div>
 
-				{/* Recommended Products */}
-				<div className="mb-10">
-					<h2 className="text-2xl font-bold text-emerald-800 mb-6">
-						Produits similaires
-					</h2>
-					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-						{[1, 2, 3, 4].map((item) => (
-							<div
-								key={item}
-								className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 transition-all hover:shadow-lg"
-							>
-								<div className="relative h-48 overflow-hidden">
-									<img
-										src="/placeholder.svg?height=300&width=300"
-										alt="Produit similaire"
-										className="w-full h-full object-cover transition-transform hover:scale-105"
-									/>
-									<div className="absolute top-3 right-3">
-										<span className="inline-flex items-center justify-center w-8 h-8 rounded-full text-white font-bold bg-green-600">
-											A
-										</span>
+				{/* Recommended Products Section */}
+				{recommended.length > 0 && !isLoading && (
+					<div className="mb-10">
+						<h2 className="text-2xl font-bold text-emerald-800 mb-6">
+							Produits similaires
+						</h2>
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+							{recommended.map((item) => (
+								<div
+									key={item.id}
+									className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 transition-all hover:shadow-lg"
+								>
+									<div className="relative h-48 overflow-hidden">
+										<img
+											src={item.image_url}
+											alt={item.product_name}
+											className="w-full h-full object-cover transition-transform hover:scale-105"
+										/>
+										{item.nutrition_grades && (
+											<div className="absolute top-3 right-3">
+												<span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-white font-bold ${getNutriscoreColor(item.nutrition_grades)}`}>
+													{item.nutrition_grades.toUpperCase()}
+												</span>
+											</div>
+										)}
+									</div>
+									<div className="p-4">
+										<h3 className="text-lg font-semibold mb-2 text-gray-800 line-clamp-1">
+											{item.product_name}
+										</h3>
+										<p className="text-sm text-gray-600 mb-3 line-clamp-2">
+											{item.description}
+										</p>
+										<p className="text-sm text-emerald-700">
+											{item.brand}
+										</p>
 									</div>
 								</div>
-								<div className="p-4">
-									<h3 className="text-lg font-semibold mb-2 text-gray-800 line-clamp-1">
-										Yaourt Bio Nature
-									</h3>
-									<p className="text-sm text-gray-600 mb-3 line-clamp-2">
-										Yaourt onctueux au lait entier de vaches
-										nourries à l'herbe
-									</p>
-									<p className="text-sm text-emerald-700">
-										Nature & Saveurs
-									</p>
-								</div>
-							</div>
-						))}
+							))}
+						</div>
 					</div>
-				</div>
+				)}
 			</div>
 		</div>
 	);
