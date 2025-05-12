@@ -34,36 +34,7 @@ export default function ProductDetail() {
 	const [recommended, setRecommended] = useState([]);
 
 
-	const fetchRecommended = async () => {
-		try {
-			console.log(product)
-			if (!product?.categories_tags || product.categories_tags.length < 2)
-				return;
-
-			const categoryTag =
-				product.categories_tags[product.categories_tags.length - 2];
-			console.log(categoryTag);
-			const token = localStorage.getItem("authToken"); // ou AsyncStorage.getItem pour React Native
-
-			const response = await fetch("http://localhost:5000/product/recommendation", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
-				},
-				body: JSON.stringify({ categoryTag }),
-			});
-			const data = await response.json();
-			console.log(data);
-			setRecommended(data.slice(0, 4)); // limite à 4 produits
-
-		} catch (err) {
-			console.error(
-				"Erreur lors du chargement des recommandations :",
-				err
-			);
-		}
-	};
+	
 	useEffect(() => {
 		fetch(`https://world.openfoodfacts.org/api/v2/product/${id}`)
 			.then((res) => {
@@ -134,6 +105,39 @@ export default function ProductDetail() {
 				].filter((n) => n.value !== undefined);
 
 				setNutrients(nutrientList);
+				
+				const fetchRecommended = async () => {
+					try {
+
+					
+			
+						const categoryTag =
+							p.categories_tags[p.categories_tags.length - 2];
+						console.log("je suis la " + categoryTag);
+						const token = localStorage.getItem("authToken"); // ou AsyncStorage.getItem pour React Native
+						const bodyData = { categories: categoryTag };
+						console.log("je suis la " + bodyData);
+						const response = await fetch("http://localhost:5000/product/recommandation", {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+								Authorization: `Bearer ${token}`,
+							},
+							
+							body: JSON.stringify(bodyData)
+						});
+						const data = await response.json();
+						console.log(data);
+						setRecommended(data.slice(0, 4)); // limite à 4 produits
+			
+					} catch (err) {
+						console.error(
+							"Erreur lors du chargement des recommandations :",
+							err
+						);
+					}
+				};
+				fetchRecommended();
 
 				setLoading(false);
 			})
@@ -142,7 +146,7 @@ export default function ProductDetail() {
 				setLoading(false);
 			})
 			.finally(() => {
-				fetchRecommended();
+				
 			});
 	}, [id]);
 
