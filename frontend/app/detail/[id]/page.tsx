@@ -163,17 +163,9 @@ export default function ProductDetail() {
 						
 						const data = await response.json();
 						
-						// Validate and type the recommended products
-						const validatedRecommended: RecommendedProduct[] = data.products.map((item: any) => ({
-							id: item.id || '',
-							product_name: item.product_name || 'Produit sans nom',
-							brand: item.brand || 'Marque inconnue',
-							description: item.description || 'Aucune description disponible',
-							image_url: item.image_url || '/placeholder.svg',
-							nutrition_grades: item.nutrition_grades || 'N/A'
-						}));
+
 						
-						setRecommended(validatedRecommended);
+						setRecommended(data.products);
 						setIsLoading(false);
 					} catch (err) {
 						console.error(
@@ -560,7 +552,7 @@ export default function ProductDetail() {
 											{item.description}
 										</p>
 										<p className="text-sm text-emerald-700">
-											{item.brand}
+											{item.brands}
 										</p>
 									</div>
 								</div>
