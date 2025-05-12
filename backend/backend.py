@@ -134,7 +134,7 @@ def preload_product_cache_thread():
     """
     print("Démarrage du préchargement du cache en arrière-plan...")
     sort_options = ['popularity_key']  # Options de tri courantes
-    nustriscore_options = ["", 'a','f']  # Valeur par défaut pour le nutriscore
+    nustriscore_options = ["", 'a','e']  # Valeur par défaut pour le nutriscore
     max_pages = 20  # Nombre de pages à précharger par option de tri
     
     # Créer la liste de toutes les combinaisons sort/page à précharger
@@ -381,7 +381,7 @@ def cache_status(current_user):
     Permet de vérifier l'état du cache (combien de pages sont préchargées)
     """
     sort_options = ['popularity_key']
-    nutriscore_options = ["", 'a', 'f']
+    nutriscore_options = ["", 'a', 'e']
     max_pages = 20
 
     status = {}
